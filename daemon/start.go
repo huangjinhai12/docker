@@ -8,6 +8,12 @@ import (
 	"syscall"
 	"time"
 
+	//wangkun
+	"log"
+	"os"
+	"unsafe"
+	//end
+
 	"google.golang.org/grpc"
 
 	"github.com/Sirupsen/logrus"
@@ -193,6 +199,20 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 	}
 
 	containerActions.WithValues("start").UpdateSince(start)
+
+	//wangkun modify to send signal to vkernel factory.
+	f, err := os.OpenFile("/dev/vkernel_factory", os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Println("open file error when send container ID to vkernel factory")
+		log.Print(err)
+		return
+	}
+	_, _, ep := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), 0x111, uintptr(unsafe.Pointer(&(container.ID))))
+	if ep != 0 {
+		fmt.Println("ioctl error when send container ID to vkernel factory")
+		return
+	}
+	//end of wangkun's modify.
 
 	return nil
 }

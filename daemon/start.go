@@ -11,7 +11,6 @@ import (
 	//wangkun
 	"log"
 	"os"
-	"unsafe"
 	//end
 
 	"google.golang.org/grpc"
@@ -169,6 +168,8 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 		return err
 	}
 
+	log.Printf("in daemon PID is %d\n", os.Getpid()) //wangkun
+
 	if err := daemon.containerd.Create(container.ID, checkpoint, checkpointDir, *spec, container.InitializeStdio, createOptions...); err != nil {
 		errDesc := grpc.ErrorDesc(err)
 		contains := func(s1, s2 string) bool {
@@ -201,19 +202,21 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 	containerActions.WithValues("start").UpdateSince(start)
 
 	//wangkun modify to send signal to vkernel factory.
-	f, err := os.OpenFile("/dev/vkernel_factory", os.O_RDWR, 0666)
-	if err != nil {
-		fmt.Println("open file error when send container ID to vkernel factory")
-		log.Print(err)
-		return
-	}
-	_, _, ep := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), 0x111, uintptr(unsafe.Pointer(&(container.ID))))
-	if ep != 0 {
-		fmt.Println("ioctl error when send container ID to vkernel factory")
-		return
-	}
-	//end of wangkun's modify.
-
+	/*	f, err := os.OpenFile("/dev/vkernel_factory", os.O_RDWR, 0666)
+		if err != nil {
+			fmt.Println("open file error when send container ID to vkernel factory")
+			log.Print(err)
+			return
+		}
+		var swangkun string
+		swangkun = "18-51debug test wangkun"
+		_, _, ep := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f.Fd()), 0x111, uintptr(unsafe.Pointer(&(swangkun))))
+		if ep != 0 {
+			fmt.Println("ioctl error when send container ID to vkernel factory")
+			return
+		}
+		//end of wangkun's modify.
+	*/
 	return nil
 }
 

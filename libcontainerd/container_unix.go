@@ -12,6 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"unsafe"
+	"log" //wangkun
+
 	"github.com/Sirupsen/logrus"
 	containerd "github.com/docker/containerd/api/grpc/types"
 	"github.com/docker/docker/pkg/ioutils"
@@ -19,6 +22,15 @@ import (
 	"github.com/tonistiigi/fifo"
 	"golang.org/x/net/context"
 )
+
+//wangkun
+
+type vkernel_obj struct {
+	id  uint32
+	pid int32
+}
+
+//end of wangkun
 
 type container struct {
 	containerCommon
@@ -159,12 +171,36 @@ func (ctr *container) start(checkpoint string, checkpointDir string, attachStdio
 		return err
 	}
 
+	log.Printf("in libcontainerd PID is %d\n", os.Getpid())                            //wangkun
+	log.Printf("in libcontainerd containerd PID is %d\n", ctr.client.remote.daemonPid) //wangkun
+
+	//wangkun
+
+	var obj vkernel_obj
+	obj.pid = int32(ctr.client.remote.daemonPid)
+	var ret_vkernel uintptr
+	ret_vkernel, _, _ = syscall.Syscall(400, uintptr(unsafe.Pointer(&obj)), 0, 0) //create vk
+	if ret_vkernel < 0 {
+		log.Printf("error create vkernel\n")
+	} else {
+		obj.id = uint32(ret_vkernel)
+		ret_vkernel, _, _ = syscall.Syscall(400, uintptr(unsafe.Pointer(&obj)), 4, 0) //attach vk
+		if ret_vkernel < 0 {
+			log.Printf("error attach vkernel\n")
+		}
+	}
+
+	//end of wangkun
+
 	resp, err := ctr.client.remote.apiClient.CreateContainer(context.Background(), r)
 	if err != nil {
 		ctr.closeFifos(iopipe)
 		return err
 	}
 	ctr.systemPid = systemPid(resp.Container)
+
+	log.Printf("container main PID is %d\n", ctr.systemPid) //wangkun
+
 	close(ready)
 
 	return ctr.client.backend.StateChanged(ctr.containerID, StateInfo{

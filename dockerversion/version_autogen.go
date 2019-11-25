@@ -8,7 +8,7 @@ package dockerversion
 const (
 	GitCommit          string = "3385658"
 	Version            string = "17.06.0-dev"
-	BuildTime          string = "2019-05-14T07:18:03.333477587+00:00"
+	BuildTime          string = "2019-11-20T01:51:46.294133890+00:00"
 	IAmStatic          string = "true"
 )
 

@@ -1,4 +1,4 @@
-// +build linux solaris
+// build linux solaris
 
 package libcontainerd
 
@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"unsafe"
 	"log" //wangkun
+	"unsafe"
 
 	"github.com/Sirupsen/logrus"
 	containerd "github.com/docker/containerd/api/grpc/types"
@@ -174,23 +174,6 @@ func (ctr *container) start(checkpoint string, checkpointDir string, attachStdio
 	log.Printf("in libcontainerd PID is %d\n", os.Getpid())                            //wangkun
 	log.Printf("in libcontainerd containerd PID is %d\n", ctr.client.remote.daemonPid) //wangkun
 
-	//wangkun
-
-	var obj vkernel_obj
-	obj.pid = int32(ctr.client.remote.daemonPid)
-	var ret_vkernel uintptr
-	ret_vkernel, _, _ = syscall.Syscall(400, uintptr(unsafe.Pointer(&obj)), 0, 0) //create vk
-	if ret_vkernel < 0 {
-		log.Printf("error create vkernel\n")
-	} else {
-		obj.id = uint32(ret_vkernel)
-		ret_vkernel, _, _ = syscall.Syscall(400, uintptr(unsafe.Pointer(&obj)), 4, 0) //attach vk
-		if ret_vkernel < 0 {
-			log.Printf("error attach vkernel\n")
-		}
-	}
-
-	//end of wangkun
 
 	resp, err := ctr.client.remote.apiClient.CreateContainer(context.Background(), r)
 	if err != nil {
@@ -198,6 +181,24 @@ func (ctr *container) start(checkpoint string, checkpointDir string, attachStdio
 		return err
 	}
 	ctr.systemPid = systemPid(resp.Container)
+
+	//wangkun
+
+        var obj vkernel_obj
+        obj.pid = int32(ctr.systemPid)
+        var ret_vkernel uintptr
+        ret_vkernel, _, _ = syscall.Syscall(400, uintptr(unsafe.Pointer(&obj)), 2, 0) //create vk
+        if ret_vkernel < 0 {
+                log.Printf("error create vkernel\n")
+        } else {
+                obj.id = uint32(ret_vkernel)
+                ret_vkernel, _, _ = syscall.Syscall(400, uintptr(unsafe.Pointer(&obj)), 4, 0) //attach vk
+                if ret_vkernel < 0 {
+                        log.Printf("error attach vkernel\n")
+                }
+        }
+
+        //end of wangkun	
 
 	log.Printf("container main PID is %d\n", ctr.systemPid) //wangkun
 
